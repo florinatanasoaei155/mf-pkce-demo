@@ -1,11 +1,15 @@
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { lazy, Suspense } from "react";
+
 const ChildComponent = lazy(() => import("remote_app/ChildComponent"));
 
 const App = () => {
   return (
     <AuthProvider>
-      <ParentComponent />
+      <Router>
+        <ParentComponent />
+      </Router>
     </AuthProvider>
   );
 };
@@ -18,6 +22,12 @@ const ParentComponent = () => {
       <div className="bg-white shadow-lg rounded-lg p-8 max-w-lg w-full text-center">
         <h1 className="text-2xl font-bold mb-4 text-blue-600">Parent App</h1>
 
+        <nav className="mb-4">
+          <Link className="mr-4 text-blue-500 hover:underline" to="/reports">
+            Reports
+          </Link>
+        </nav>
+
         {isAuthenticated ? (
           <>
             <p className="text-green-600 mb-4">✅ Logged in</p>
@@ -27,11 +37,18 @@ const ParentComponent = () => {
             >
               Logout
             </button>
-            <Suspense
-              fallback={<p className="text-gray-500">Loading Child...</p>}
-            >
-              <ChildComponent />
-            </Suspense>
+
+            <Routes>
+              {/* Parent App only handles /reports, Child App takes over after */}
+              <Route
+                path="/reports/*"
+                element={
+                  <Suspense fallback={<p>Loading Reports...</p>}>
+                    <ChildComponent />
+                  </Suspense>
+                }
+              />
+            </Routes>
           </>
         ) : (
           <button
