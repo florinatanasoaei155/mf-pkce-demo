@@ -6,6 +6,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => (
 );
 
 export const useAuth = () => {
-  const { login, logout, isAuthenticated } = useOidc();
-  return { login, logout, isAuthenticated };
+  const { login, logout, isAuthenticated, renewTokens } = useOidc();
+  return { login, logout, isAuthenticated, renewTokens };
 };

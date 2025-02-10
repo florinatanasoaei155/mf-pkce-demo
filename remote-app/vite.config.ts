@@ -12,8 +12,6 @@ export default defineConfig({
       name: "remote_app",
       filename: "remoteEntry.js",
       exposes: {
-        "./Button": "./src/components/Button",
-        "./Header": "./src/components/Header",
         "./ChildComponent": "./src/components/ChildComponent",
       },
       shared: {

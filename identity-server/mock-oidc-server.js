@@ -166,3 +166,29 @@ app.get("/connect/userinfo", (req, res) => {
 app.listen(9000, () => {
   console.log("Mock OIDC provider running on http://localhost:9000");
 });
+
+app.get("/api/reports", (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res
+      .status(401)
+      .json({ error: "missing_token", message: "No token provided" });
+  }
+
+  const accessToken = authHeader.split(" ")[1];
+  const validTokens = Object.values(tokens).map((t) => t.accessToken);
+
+  if (!validTokens.includes(accessToken)) {
+    return res
+      .status(403)
+      .json({ error: "invalid_token", message: "Token is invalid or expired" });
+  }
+
+  console.log(`📄 Secure reports fetched using token: ${accessToken}`);
+
+  res.json([
+    { id: 1, name: "Monthly Sales Report", date: "2024-02-06" },
+    { id: 2, name: "User Engagement Analysis", date: "2024-02-05" },
+    { id: 3, name: "Revenue Forecast", date: "2024-02-04" },
+  ]);
+});
