@@ -25,7 +25,7 @@ const ChildApp = () => {
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:8000/api/reports");
+      const response = await fetch("http://localhost:9000/api/reports");
 
       if (response.status === 401) {
         console.warn("🔄 Token expired, attempting refresh...");
