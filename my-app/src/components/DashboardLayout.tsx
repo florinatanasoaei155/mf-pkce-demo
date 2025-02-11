@@ -6,15 +6,16 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout(null);
+    await logout(null); // Prevents auto-login
     sessionStorage.clear();
     localStorage.clear();
     navigate("/login", { replace: true });
   };
 
+  console.log(isAuthenticated);
+
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
       <div className="w-64 bg-blue-600 text-white p-5 flex flex-col">
         <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
         <nav className="space-y-2">
@@ -35,7 +36,6 @@ const DashboardLayout = () => {
         )}
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 p-5">
         <Outlet />
       </div>
