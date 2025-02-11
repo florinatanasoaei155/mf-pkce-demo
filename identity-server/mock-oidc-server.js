@@ -1,22 +1,73 @@
 const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-let users = {
-  "test-user": {
-    sub: "1234567890",
-    name: "Test User",
-    email: "testuser@example.com",
-  },
+const DB_PATH = path.join(__dirname, "database.json");
+
+const readDB = () => JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
+const writeDB = (data) =>
+  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+
+// 📌 Generate JWT Tokens
+const generateTokens = (userId) => {
+  const accessToken = jwt.sign({ sub: userId }, "secret", { expiresIn: "5m" });
+  const refreshToken = crypto.randomBytes(32).toString("hex");
+  return { accessToken, refreshToken };
 };
 
-let authCodes = {};
 let tokens = {};
+
+// 📌 Middleware: Validate Access Token
+const authenticate = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "missing_token" });
+  }
+
+  try {
+    const token = authHeader.split(" ")[1];
+    jwt.verify(token, "secret");
+    next();
+  } catch (err) {
+    res.status(403).json({ error: "invalid_token" });
+  }
+};
+
+// 📌 User Login (before OIDC Authorization)
+app.post("/auth/login", (req, res) => {
+  const db = readDB();
+  const { email, password, redirect_uri } = req.body;
+
+  // Check if user exists in database.json
+  const user = db.users[email];
+  if (!user || user.password !== password) {
+    return res.status(401).json({
+      error: "invalid_credentials",
+      message: "Invalid email or password",
+    });
+  }
+
+  // Generate an authorization code for PKCE
+  const authCode = crypto.randomBytes(16).toString("hex");
+  db.authCodes[authCode] = {
+    code_challenge: "mock_challenge",
+    redirect_uri,
+    email,
+  };
+  writeDB(db);
+
+  console.log(`✅ Issued Auth Code for ${email}: ${authCode}`);
+
+  res.json({ authorization_code: authCode });
+});
 
 // Step 1: OIDC Discovery Endpoint
 app.get("/.well-known/openid-configuration", (_, res) => {
@@ -33,87 +84,51 @@ app.get("/.well-known/openid-configuration", (_, res) => {
   });
 });
 
-// 📌 Authorization Endpoint
+// 📌 Authorization Endpoint (PKCE Flow)
 app.get("/connect/authorize", (req, res) => {
-  const {
-    client_id,
-    redirect_uri,
-    response_type,
-    state,
-    code_challenge,
-    code_challenge_method,
-  } = req.query;
-
+  const { client_id, redirect_uri, response_type, state, code_challenge } =
+    req.query;
   if (
     !client_id ||
     !redirect_uri ||
     !response_type ||
     !state ||
-    !code_challenge ||
-    !code_challenge_method
+    !code_challenge
   ) {
     return res.status(400).json({ error: "invalid_request" });
   }
 
   const authCode = crypto.randomBytes(16).toString("hex");
-  authCodes[authCode] = { code_challenge, redirect_uri };
+  const db = readDB();
+  db.authCodes[authCode] = { code_challenge, redirect_uri };
+  writeDB(db);
 
   console.log(`✅ Issued Auth Code: ${authCode}`);
-
   res.redirect(`${redirect_uri}?code=${authCode}&state=${state}`);
 });
 
 // 📌 Token Exchange Endpoint
 app.post("/connect/token", (req, res) => {
-  console.log("🔹 Token request received with body:", req.body); // Log request payload
+  const db = readDB();
+  const { code, redirect_uri, grant_type, code_verifier } = req.body;
 
-  const { code, client_id, redirect_uri, grant_type, code_verifier } = req.body;
-
-  if (!grant_type || !code) {
-    console.error("❌ Missing grant_type or code!");
-    return res.status(400).json({
-      error: "invalid_request",
-      error_description: "Missing grant_type or code",
-    });
+  if (grant_type !== "authorization_code" || !code || !code_verifier) {
+    return res.status(400).json({ error: "invalid_request" });
   }
 
-  if (grant_type !== "authorization_code") {
-    console.error("❌ Invalid grant type:", grant_type);
-    return res.status(400).json({
-      error: "unsupported_grant_type",
-      error_description: "Only authorization_code is supported",
-    });
+  if (!db.authCodes[code] || db.authCodes[code].redirect_uri !== redirect_uri) {
+    return res.status(400).json({ error: "invalid_grant" });
   }
 
-  const savedCode = authCodes[code];
-  if (!savedCode || savedCode.redirect_uri !== redirect_uri) {
-    console.error("❌ Invalid or expired authorization code");
-    return res.status(400).json({
-      error: "invalid_grant",
-      error_description: "Invalid or expired authorization code",
-    });
-  }
-
-  if (!code_verifier) {
-    console.error("❌ Missing code_verifier");
-    return res.status(400).json({
-      error: "invalid_request",
-      error_description: "Missing code_verifier",
-    });
-  }
-
-  // Generate mock access token & refresh token
-  const accessToken = crypto.randomBytes(32).toString("hex");
-  const refreshToken = crypto.randomBytes(32).toString("hex");
-  tokens[refreshToken] = { accessToken };
-
-  console.log(`✅ Issued Access Token: ${accessToken}`);
+  const { accessToken, refreshToken } = generateTokens("1234567890");
+  db.tokens[refreshToken] = { accessToken };
+  delete db.authCodes[code];
+  writeDB(db);
 
   res.json({
     access_token: accessToken,
-    token_type: "Bearer",
-    expires_in: 300, // 5 min expiration
     refresh_token: refreshToken,
+    expires_in: 300,
   });
 });
 
@@ -144,51 +159,91 @@ app.post("/connect/token/refresh", (req, res) => {
   });
 });
 
-// 📌 Step 5: User Info Endpoint
+app.get("/connect/logout", (req, res) => {
+  const { id_token_hint, post_logout_redirect_uri } = req.query;
+
+  console.log(`👋 Logging out user...`);
+  tokens = {}; // Clear all stored tokens
+  res.clearCookie("oidc"); // If using cookies, clear them
+
+  res.redirect(post_logout_redirect_uri || "http://localhost:5173/login");
+});
+
+// 📌 User Info Endpoint
 app.get("/connect/userinfo", (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ error: "missing_token" });
   }
 
-  const accessToken = authHeader.split(" ")[1];
-  const user = users["test-user"]; // Mock user data
+  try {
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, "secret");
+    const user = readDB().users["test-user"];
+    if (!user) return res.status(401).json({ error: "invalid_token" });
 
-  if (!user) {
-    return res.status(401).json({ error: "invalid_token" });
+    res.json({ sub: user.sub, name: user.name, email: user.email });
+  } catch (err) {
+    res.status(401).json({ error: "invalid_token" });
   }
-
-  console.log(`👤 User Info Requested: ${user.email}`);
-
-  res.json(user);
 });
 
+// 📌 Reports API (Protected)
+app.get("/api/reports", authenticate, (req, res) => {
+  res.json(readDB().reports);
+});
+
+// 📌 Fetch a Single Report
+app.get("/api/reports/:id", authenticate, (req, res) => {
+  const db = readDB();
+  const report = db.reports.find((r) => r.id === parseInt(req.params.id));
+
+  if (!report) {
+    return res
+      .status(404)
+      .json({ error: "not_found", message: "Report not found" });
+  }
+
+  res.json(report);
+});
+
+// 📌 Create Report
+app.post("/api/reports", authenticate, (req, res) => {
+  const db = readDB();
+  const { name, date } = req.body;
+  const newReport = { id: db.reports.length + 1, name, date };
+  db.reports.push(newReport);
+  writeDB(db);
+
+  res.status(201).json(newReport);
+});
+
+// 📌 Update Report
+app.put("/api/reports/:id", authenticate, (req, res) => {
+  const db = readDB();
+  const report = db.reports.find((r) => r.id === parseInt(req.params.id));
+  if (!report) return res.status(404).json({ error: "not_found" });
+
+  report.name = req.body.name;
+  report.date = req.body.date;
+  writeDB(db);
+  res.json(report);
+});
+
+// 📌 Delete Report
+app.delete("/api/reports/:id", authenticate, (req, res) => {
+  const db = readDB();
+  const reportIndex = db.reports.findIndex(
+    (r) => r.id === parseInt(req.params.id)
+  );
+  if (reportIndex === -1) return res.status(404).json({ error: "not_found" });
+
+  db.reports.splice(reportIndex, 1);
+  writeDB(db);
+  res.status(204).send();
+});
+
+// 📌 Start API Server
 app.listen(9000, () => {
-  console.log("Mock OIDC provider running on http://localhost:9000");
-});
-
-app.get("/api/reports", (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res
-      .status(401)
-      .json({ error: "missing_token", message: "No token provided" });
-  }
-
-  const accessToken = authHeader.split(" ")[1];
-  const validTokens = Object.values(tokens).map((t) => t.accessToken);
-
-  if (!validTokens.includes(accessToken)) {
-    return res
-      .status(403)
-      .json({ error: "invalid_token", message: "Token is invalid or expired" });
-  }
-
-  console.log(`📄 Secure reports fetched using token: ${accessToken}`);
-
-  res.json([
-    { id: 1, name: "Monthly Sales Report", date: "2024-02-06" },
-    { id: 2, name: "User Engagement Analysis", date: "2024-02-05" },
-    { id: 3, name: "Revenue Forecast", date: "2024-02-04" },
-  ]);
+  console.log("Mock API server running on http://localhost:9000");
 });

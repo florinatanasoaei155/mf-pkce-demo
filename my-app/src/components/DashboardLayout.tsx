@@ -1,8 +1,16 @@
-import { Outlet, Link } from "react-router-dom";
-import { useAuth } from "./AuthProvider";
+import { Outlet, Link, useNavigate } from "react-router-dom";
+import { useOidc } from "@axa-fr/react-oidc";
 
 const DashboardLayout = () => {
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useOidc();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout(null);
+    sessionStorage.clear();
+    localStorage.clear();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -17,12 +25,14 @@ const DashboardLayout = () => {
             📊 Reports
           </Link>
         </nav>
-        <button
-          className="mt-auto bg-red-500 p-2 rounded"
-          onClick={() => logout()}
-        >
-          Logout
-        </button>
+        {isAuthenticated && (
+          <button
+            className="mt-auto bg-red-500 p-2 rounded"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        )}
       </div>
 
       {/* Main Content */}

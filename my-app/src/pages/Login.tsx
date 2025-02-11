@@ -1,55 +1,29 @@
-import { useState } from "react";
-import { useAuth } from "../components/AuthProvider";
+import { useEffect } from "react";
+import { useOidc } from "@axa-fr/react-oidc";
 import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useOidc();
   const navigate = useNavigate();
-  const [credentials, setCredentials] = useState({
-    username: "",
-    password: "",
-  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCredentials({ ...credentials, [e.target.name]: e.target.value });
-  };
-
-  const handleLogin = () => {
-    // Simulating authentication
-    if (
-      credentials.username === "admin" &&
-      credentials.password === "password"
-    ) {
-      login();
-      navigate("/dashboard");
-    } else {
-      alert("Invalid credentials");
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard", { replace: true });
     }
-  };
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-96">
-        <h2 className="text-2xl font-semibold text-center mb-4">Login</h2>
-        <input
-          type="text"
-          name="username"
-          placeholder="Username"
-          className="w-full p-2 border rounded mb-2"
-          onChange={handleChange}
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          className="w-full p-2 border rounded mb-4"
-          onChange={handleChange}
-        />
+      <div className="bg-white p-8 rounded-lg shadow-lg w-96 text-center">
+        <h2 className="text-2xl font-semibold mb-4 text-gray-700">Login</h2>
+        <p className="text-gray-500 mb-6">
+          Please login using OpenID Connect authentication.
+        </p>
         <button
-          className="w-full bg-blue-500 text-white p-2 rounded"
-          onClick={handleLogin}
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg"
+          onClick={() => login()}
         >
-          Login
+          Login with OIDC
         </button>
       </div>
     </div>
