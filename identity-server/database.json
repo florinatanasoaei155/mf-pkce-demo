@@ -1,16 +1,37 @@
 {
   "users": {
-    "test-user": {
+    "testuser@example.com": {
       "sub": "1234567890",
       "name": "Test User",
       "email": "testuser@example.com",
-      "password": "password"
+      "password": "$2b$10$pdaWDZhmvLuecRs/FIZhQObaMF.2IDXW3AAPZQL86xkRsMdwhwweK"
     }
   },
-  "authCodes": {},
+  "authCodes": {
+    "3ec9e8f75a1f9e34fc3b8aac7323b121": {
+      "code_challenge": "mock_challenge",
+      "redirect_uri": "http://localhost:5173/authentication/callback",
+      "email": "testuser@example.com"
+    },
+    "d8818b3b87061adf385f1737ace2ea91": {
+      "code_challenge": "mock_challenge",
+      "redirect_uri": "http://localhost:5173/authentication/callback",
+      "email": "testuser@example.com"
+    },
+    "4b4402909d93fecf0809ea20a078e234": {
+      "code_challenge": "mock_challenge",
+      "redirect_uri": "http://localhost:5173/authentication/callback",
+      "email": "testuser@example.com"
+    },
+    "20891cdc617cb332d78ee9c46ccc84b2": {
+      "code_challenge": "mock_challenge",
+      "redirect_uri": "http://localhost:5173/authentication/callback",
+      "email": "testuser@example.com"
+    }
+  },
   "tokens": {
-    "9025de501e20e5030a9041454cbf2f97bbb844c5f7d5a9fb2c2e50a2834a2a57": {
-      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNzM5MjUzMzQ0LCJleHAiOjE3MzkyNTM2NDR9.KZwrcuJai3T0L3WrByKXXfkZ37R2SuVrXDlDkyDFVF4"
+    "9894cf56967639c1ff4b23c53d049dfea0d4edd810f1948eb2021e8f97610b26": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNzM5MjU1ODQwLCJleHAiOjE3MzkyNTYxNDB9.SV9UtLkD_bJebl_9cEW6_gIsPf7iQB6-BbyFqwne2kE"
     }
   },
   "reports": [

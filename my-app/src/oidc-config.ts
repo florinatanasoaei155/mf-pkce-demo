@@ -5,7 +5,7 @@ export const oidcConfiguration: OidcConfiguration = {
   redirect_uri: window.location.origin + "/authentication/callback",
   silent_redirect_uri:
     window.location.origin + "/authentication/silent-callback",
-  scope: "openid profile email offline_access",
+  scope: "openid profile email offline_access api",
   authority: "http://localhost:9000",
   service_worker_relative_url: "/OidcServiceWorker.js",
   service_worker_keep_alive_path: "/",

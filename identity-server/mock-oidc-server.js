@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const path = require("path");
+const bcrypt = require("bcrypt");
 
 const app = express();
 app.use(cors());
@@ -40,19 +41,63 @@ const authenticate = (req, res, next) => {
   }
 };
 
+// async function addUser(email, name, password) {
+//   const db = readDB();
+
+//   // ✅ Hash password before storing it
+//   const hashedPassword = await bcrypt.hash(password, 10);
+
+//   db.users[email] = {
+//     sub: "1234567890",
+//     name,
+//     email,
+//     password: hashedPassword,
+//   };
+//   writeDB(db);
+
+//   console.log(`✅ User ${email} added successfully.`);
+// }
+
+// addUser("testuser@example.com", "Test User", "password123");
+
 // 📌 User Login
-app.post("/auth/login", (req, res) => {
+app.post("/auth/login", async (req, res) => {
   const db = readDB();
   const { email, password, redirect_uri } = req.body;
 
-  const user = db.users[email];
-  if (!user || user.password !== password) {
+  if (!db.users) {
+    return res
+      .status(500)
+      .json({ error: "server_error", message: "No users found" });
+  }
+
+  // 🔍 Find user in database
+  const user = Object.values(db.users).find((u) => u.email === email);
+
+  console.log("User found:", user);
+  console.log("Entered password:", password);
+  console.log("Stored hashed password:", user ? user.password : "N/A");
+
+  if (!user) {
     return res.status(401).json({
       error: "invalid_credentials",
       message: "Invalid email or password",
     });
   }
 
+  // 🔐 Compare passwords using bcrypt
+  const passwordMatch = await bcrypt.compare(password, user.password);
+
+  console.log("Password match result:", passwordMatch);
+
+  if (!passwordMatch) {
+    return res.status(401).json({
+      error: "invalid_credentials",
+      message: "Invalid email or password",
+    });
+  }
+
+  // ✅ Generate Authorization Code for PKCE
   const authCode = crypto.randomBytes(16).toString("hex");
   db.authCodes[authCode] = {
     code_challenge: "mock_challenge",
@@ -62,7 +107,6 @@ app.post("/auth/login", (req, res) => {
   writeDB(db);
 
   console.log(`✅ Issued Auth Code for ${email}: ${authCode}`);
-
   res.json({ authorization_code: authCode });
 });
 
