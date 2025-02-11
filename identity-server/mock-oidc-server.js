@@ -12,6 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const DB_PATH = path.join(__dirname, "database.json");
 
+// 📌 Utility: Read & Write Database JSON
 const readDB = () => JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
 const writeDB = (data) =>
   fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
@@ -22,8 +23,6 @@ const generateTokens = (userId) => {
   const refreshToken = crypto.randomBytes(32).toString("hex");
   return { accessToken, refreshToken };
 };
-
-let tokens = {};
 
 // 📌 Middleware: Validate Access Token
 const authenticate = (req, res, next) => {
@@ -41,12 +40,11 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// 📌 User Login (before OIDC Authorization)
+// 📌 User Login
 app.post("/auth/login", (req, res) => {
   const db = readDB();
   const { email, password, redirect_uri } = req.body;
 
-  // Check if user exists in database.json
   const user = db.users[email];
   if (!user || user.password !== password) {
     return res.status(401).json({
@@ -55,7 +53,6 @@ app.post("/auth/login", (req, res) => {
     });
   }
 
-  // Generate an authorization code for PKCE
   const authCode = crypto.randomBytes(16).toString("hex");
   db.authCodes[authCode] = {
     code_challenge: "mock_challenge",
@@ -69,18 +66,16 @@ app.post("/auth/login", (req, res) => {
   res.json({ authorization_code: authCode });
 });
 
-// Step 1: OIDC Discovery Endpoint
+// 📌 OIDC Discovery Endpoint
 app.get("/.well-known/openid-configuration", (_, res) => {
   res.json({
     issuer: "http://localhost:9000",
     authorization_endpoint: "http://localhost:9000/connect/authorize",
     token_endpoint: "http://localhost:9000/connect/token",
     userinfo_endpoint: "http://localhost:9000/connect/userinfo",
-    jwks_uri: "http://localhost:9000/.well-known/jwks",
-    grant_types_supported: ["authorization_code", "refresh_token"],
-    response_types_supported: ["code"],
+    end_session_endpoint: "http://localhost:9000/connect/logout",
     scopes_supported: ["openid", "profile", "email"],
-    code_challenge_methods_supported: ["S256"],
+    response_types_supported: ["code"],
   });
 });
 
@@ -88,6 +83,7 @@ app.get("/.well-known/openid-configuration", (_, res) => {
 app.get("/connect/authorize", (req, res) => {
   const { client_id, redirect_uri, response_type, state, code_challenge } =
     req.query;
+
   if (
     !client_id ||
     !redirect_uri ||
@@ -132,60 +128,52 @@ app.post("/connect/token", (req, res) => {
   });
 });
 
-// 📌 Step 4: Refresh Token Endpoint
+// 📌 Token Refresh Endpoint
 app.post("/connect/token/refresh", (req, res) => {
-  const { refresh_token, client_id, grant_type } = req.body;
+  const db = readDB();
+  const { refresh_token, grant_type } = req.body;
 
   if (grant_type !== "refresh_token" || !refresh_token) {
     return res.status(400).json({ error: "invalid_request" });
   }
 
-  const savedToken = tokens[refresh_token];
-  if (!savedToken) {
+  if (!db.tokens[refresh_token]) {
     return res.status(400).json({ error: "invalid_grant" });
   }
 
-  // Generate a new access token
-  const newAccessToken = crypto.randomBytes(32).toString("hex");
-  tokens[refresh_token] = { accessToken: newAccessToken };
-
-  console.log(`🔄 Refreshed Token: ${newAccessToken}`);
+  const { accessToken, refreshToken: newRefreshToken } =
+    generateTokens("1234567890");
+  db.tokens[newRefreshToken] = { accessToken };
+  delete db.tokens[refresh_token]; // Remove old refresh token
+  writeDB(db);
 
   res.json({
-    access_token: newAccessToken,
-    token_type: "Bearer",
-    expires_in: 300, // 5 minutes
-    refresh_token, // Keep the same refresh token
+    access_token: accessToken,
+    refresh_token: newRefreshToken,
+    expires_in: 300,
   });
 });
 
+// 📌 Logout Endpoint
 app.get("/connect/logout", (req, res) => {
-  const { id_token_hint, post_logout_redirect_uri } = req.query;
+  const { post_logout_redirect_uri } = req.query;
 
   console.log(`👋 Logging out user...`);
-  tokens = {}; // Clear all stored tokens
-  res.clearCookie("oidc"); // If using cookies, clear them
+  const db = readDB();
+  db.tokens = {}; // Clear stored tokens
+  writeDB(db);
 
   res.redirect(post_logout_redirect_uri || "http://localhost:5173/login");
 });
 
 // 📌 User Info Endpoint
-app.get("/connect/userinfo", (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "missing_token" });
-  }
+app.get("/connect/userinfo", authenticate, (req, res) => {
+  const db = readDB();
+  const user = db.users["test-user"];
 
-  try {
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, "secret");
-    const user = readDB().users["test-user"];
-    if (!user) return res.status(401).json({ error: "invalid_token" });
+  if (!user) return res.status(401).json({ error: "invalid_token" });
 
-    res.json({ sub: user.sub, name: user.name, email: user.email });
-  } catch (err) {
-    res.status(401).json({ error: "invalid_token" });
-  }
+  res.json({ sub: user.sub, name: user.name, email: user.email });
 });
 
 // 📌 Reports API (Protected)
@@ -198,11 +186,7 @@ app.get("/api/reports/:id", authenticate, (req, res) => {
   const db = readDB();
   const report = db.reports.find((r) => r.id === parseInt(req.params.id));
 
-  if (!report) {
-    return res
-      .status(404)
-      .json({ error: "not_found", message: "Report not found" });
-  }
+  if (!report) return res.status(404).json({ error: "not_found" });
 
   res.json(report);
 });
@@ -233,17 +217,12 @@ app.put("/api/reports/:id", authenticate, (req, res) => {
 // 📌 Delete Report
 app.delete("/api/reports/:id", authenticate, (req, res) => {
   const db = readDB();
-  const reportIndex = db.reports.findIndex(
-    (r) => r.id === parseInt(req.params.id)
-  );
-  if (reportIndex === -1) return res.status(404).json({ error: "not_found" });
-
-  db.reports.splice(reportIndex, 1);
+  db.reports = db.reports.filter((r) => r.id !== parseInt(req.params.id));
   writeDB(db);
   res.status(204).send();
 });
 
 // 📌 Start API Server
-app.listen(9000, () => {
-  console.log("Mock API server running on http://localhost:9000");
-});
+app.listen(9000, () =>
+  console.log("✅ Mock OIDC & API Server running on http://localhost:9000")
+);
