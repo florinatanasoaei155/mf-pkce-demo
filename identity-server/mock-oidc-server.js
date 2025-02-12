@@ -41,26 +41,6 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// async function addUser(email, name, password) {
-//   const db = readDB();
-
-//   // ✅ Hash password before storing it
-//   const hashedPassword = await bcrypt.hash(password, 10);
-
-//   db.users[email] = {
-//     sub: "1234567890",
-//     name,
-//     email,
-//     password: hashedPassword,
-//   };
-//   writeDB(db);
-
-//   console.log(`✅ User ${email} added successfully.`);
-// }
-
-// addUser("testuser@example.com", "Test User", "password123");
-
-// 📌 User Login
 app.post("/auth/login", async (req, res) => {
   const db = readDB();
   const { email, password, redirect_uri } = req.body;
@@ -71,7 +51,6 @@ app.post("/auth/login", async (req, res) => {
       .json({ error: "server_error", message: "No users found" });
   }
 
-  // 🔍 Find user in database
   const user = Object.values(db.users).find((u) => u.email === email);
 
   console.log("User found:", user);
@@ -85,7 +64,6 @@ app.post("/auth/login", async (req, res) => {
     });
   }
 
-  // 🔐 Compare passwords using bcrypt
   const passwordMatch = await bcrypt.compare(password, user.password);
 
   console.log("Password match result:", passwordMatch);
@@ -97,7 +75,6 @@ app.post("/auth/login", async (req, res) => {
     });
   }
 
-  // ✅ Generate Authorization Code for PKCE
   const authCode = crypto.randomBytes(16).toString("hex");
   db.authCodes[authCode] = {
     code_challenge: "mock_challenge",
@@ -110,7 +87,6 @@ app.post("/auth/login", async (req, res) => {
   res.json({ authorization_code: authCode });
 });
 
-// 📌 OIDC Discovery Endpoint
 app.get("/.well-known/openid-configuration", (_, res) => {
   res.json({
     issuer: "http://localhost:9000",
@@ -123,7 +99,6 @@ app.get("/.well-known/openid-configuration", (_, res) => {
   });
 });
 
-// 📌 Authorization Endpoint (PKCE Flow)
 app.get("/connect/authorize", (req, res) => {
   const { client_id, redirect_uri, response_type, state, code_challenge } =
     req.query;
@@ -147,7 +122,6 @@ app.get("/connect/authorize", (req, res) => {
   res.redirect(`${redirect_uri}?code=${authCode}&state=${state}`);
 });
 
-// 📌 Token Exchange Endpoint
 app.post("/connect/token", (req, res) => {
   const db = readDB();
   const { code, redirect_uri, grant_type, code_verifier } = req.body;
@@ -172,7 +146,6 @@ app.post("/connect/token", (req, res) => {
   });
 });
 
-// 📌 Token Refresh Endpoint
 app.post("/connect/token/refresh", (req, res) => {
   const db = readDB();
   const { refresh_token, grant_type } = req.body;
@@ -188,7 +161,7 @@ app.post("/connect/token/refresh", (req, res) => {
   const { accessToken, refreshToken: newRefreshToken } =
     generateTokens("1234567890");
   db.tokens[newRefreshToken] = { accessToken };
-  delete db.tokens[refresh_token]; // Remove old refresh token
+  delete db.tokens[refresh_token];
   writeDB(db);
 
   res.json({
@@ -198,13 +171,12 @@ app.post("/connect/token/refresh", (req, res) => {
   });
 });
 
-// 📌 Logout Endpoint
 app.get("/connect/logout", (req, res) => {
   const { post_logout_redirect_uri } = req.query;
 
   console.log(`👋 Logging out user...`);
   const db = readDB();
-  db.tokens = {}; // Clear stored tokens
+  db.tokens = {};
   writeDB(db);
 
   res.redirect(post_logout_redirect_uri || "http://localhost:5173/login");
@@ -220,12 +192,10 @@ app.get("/connect/userinfo", authenticate, (req, res) => {
   res.json({ sub: user.sub, name: user.name, email: user.email });
 });
 
-// 📌 Reports API (Protected)
 app.get("/api/reports", authenticate, (req, res) => {
   res.json(readDB().reports);
 });
 
-// 📌 Fetch a Single Report
 app.get("/api/reports/:id", authenticate, (req, res) => {
   const db = readDB();
   const report = db.reports.find((r) => r.id === parseInt(req.params.id));
@@ -235,7 +205,6 @@ app.get("/api/reports/:id", authenticate, (req, res) => {
   res.json(report);
 });
 
-// 📌 Create Report
 app.post("/api/reports", authenticate, (req, res) => {
   const db = readDB();
   const { name, date } = req.body;
@@ -246,7 +215,6 @@ app.post("/api/reports", authenticate, (req, res) => {
   res.status(201).json(newReport);
 });
 
-// 📌 Update Report
 app.put("/api/reports/:id", authenticate, (req, res) => {
   const db = readDB();
   const report = db.reports.find((r) => r.id === parseInt(req.params.id));
@@ -258,7 +226,6 @@ app.put("/api/reports/:id", authenticate, (req, res) => {
   res.json(report);
 });
 
-// 📌 Delete Report
 app.delete("/api/reports/:id", authenticate, (req, res) => {
   const db = readDB();
   db.reports = db.reports.filter((r) => r.id !== parseInt(req.params.id));
@@ -266,7 +233,6 @@ app.delete("/api/reports/:id", authenticate, (req, res) => {
   res.status(204).send();
 });
 
-// 📌 Start API Server
 app.listen(9000, () =>
   console.log("✅ Mock OIDC & API Server running on http://localhost:9000")
 );
