@@ -13,10 +13,10 @@ export default defineConfig({
       remotes: {
         remote_app: "http://localhost:5001/assets/remoteEntry.js",
       },
-      shared: {
-        react: { requiredVersion: "^19.0.0" },
-        "react-dom": { requiredVersion: "^19.0.0" },
-      },
+      // shared: {
+      //   react: { requiredVersion: "^19.0.0" },
+      //   "react-dom": { requiredVersion: "^19.0.0" },
+      // },
     }),
   ],
   build: {
@@ -24,5 +24,14 @@ export default defineConfig({
     target: "esnext",
     minify: false,
     cssCodeSplit: false,
+  },
+  preview: {
+    port: 3000,
+    strictPort: true,
+    cors: true,
+  },
+  server: {
+    port: 3000,
+    strictPort: true,
   },
 });

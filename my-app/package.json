@@ -8,11 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "serve": "npm run build && npm run preview",
-    "postinstall": "node ./node_modules/@axa-fr/react-oidc/bin/copy-service-worker-files.mjs public"
+    "serve": "npm run build && npm run preview"
   },
   "dependencies": {
-    "@axa-fr/react-oidc": "^7.25.3",
+    "@axa-fr/react-oidc": "^6.16.7",
     "@tailwindcss/vite": "^4.0.5",
     "axios": "^1.7.9",
     "firebase": "^11.3.0",
@@ -41,5 +40,6 @@
       "@axa-fr/react-oidc",
       "protobufjs"
     ]
-  }
+  },
+  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af"
 }
