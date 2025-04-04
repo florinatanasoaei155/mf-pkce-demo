@@ -29,10 +29,6 @@ Module Federation is a feature in Webpack 5 that enables dynamic code sharing be
   npm install -g pnpm
   ```
 
----
-
-# Remote and Host App Setup Guide
-
 ## Remote App Setup
 
 The Remote App exposes modules for the Host App. To start the Remote App, execute the following commands:
@@ -95,7 +91,6 @@ A typical directory structure for this project is as follows:
 └── README.md
 ```
 
----
 
 ## Troubleshooting
 
@@ -108,13 +103,11 @@ If you encounter port conflicts when running `pnpm serve`, verify that the defau
 ### Module Federation Issues
 Double-check that the remote module URLs in your Host App configuration match the served address of the Remote App.
 
----
 
 ## Additional Resources
-- Webpack Module Federation Documentation
-- pnpm Documentation
+- [Webpack Module Federation Documentation](https://webpack.js.org/concepts/module-federation/)
+- [pnpm Documentation](https://pnpm.io/installation)
 
----
 
 ## Contributing
 Contributions are welcome! To contribute:
@@ -124,10 +117,6 @@ Contributions are welcome! To contribute:
 3. Commit your changes.
 4. Open a pull request with your improvements or bug fixes.
 
----
 
 ## License
 This project is licensed under the MIT License.
-
-
-
