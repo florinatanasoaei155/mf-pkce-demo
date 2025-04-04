@@ -1,37 +1,10 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Report } from "../types";
+import reports from "../mocks/reports.json";
 
 const Reports = () => {
-  const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const response = await fetch("http://localhost:9000/api/reports");
-        if (!response.ok) throw new Error("Failed to fetch reports");
-
-        const data = await response.json();
-        setReports(data);
-      } catch (error) {
-        console.error(error);
-        setError("Failed to load reports.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReports();
-  }, []);
-
   return (
     <div className="p-6 bg-white shadow-md rounded-lg">
       <h2 className="text-2xl font-bold text-gray-800 mb-4">📊 Reports</h2>
-
-      {loading && <p className="text-gray-500">Loading reports...</p>}
-      {error && <p className="text-red-500">{error}</p>}
 
       <ul className="space-y-4">
         {reports.map((report) => (

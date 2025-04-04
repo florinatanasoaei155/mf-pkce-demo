@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import reports from "../mocks/reports.json";
 
 const EditReport = () => {
   const { id } = useParams();
@@ -8,20 +9,10 @@ const EditReport = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchReport = async () => {
-      try {
-        const response = await fetch(`http://localhost:9000/api/reports/${id}`);
-        if (!response.ok) throw new Error("Failed to fetch report");
-
-        const data = await response.json();
-        setForm({ name: data.name, date: data.date });
-      } catch (error) {
-        console.error(error);
-        setError("Failed to load report.");
-      }
-    };
-
-    fetchReport();
+    const foundReport = reports.find((item) => item.id === id);
+    if (id && foundReport) {
+      setForm({ name: foundReport.name, date: foundReport.date });
+    }
   }, [id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,13 +22,7 @@ const EditReport = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const response = await fetch(`http://localhost:9000/api/reports/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) throw new Error("Failed to update report");
+      console.log("data to submit -> ", form);
       navigate(`/${id}`);
     } catch (error) {
       console.error(error);

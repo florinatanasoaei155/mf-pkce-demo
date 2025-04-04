@@ -1,30 +1,17 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Report } from "../types";
+import reports from "../mocks/reports.json";
 
 const ReportDetails = () => {
   const { id } = useParams();
   const [report, setReport] = useState<Report | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchReport = async () => {
-      try {
-        const response = await fetch(`http://localhost:9000/api/reports/${id}`);
-        if (!response.ok) throw new Error("Failed to fetch report");
-
-        const data = await response.json();
-        setReport(data);
-      } catch (error) {
-        console.error(error);
-        setError("Failed to load report.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReport();
+    const foundReport = reports.find((item) => item.id === id);
+    if (id && foundReport) {
+      setReport(foundReport);
+    }
   }, [id]);
 
   return (
@@ -32,9 +19,6 @@ const ReportDetails = () => {
       <h2 className="text-2xl font-bold text-gray-800 mb-4">
         📄 Report Details
       </h2>
-
-      {loading && <p className="text-gray-500">Loading...</p>}
-      {error && <p className="text-red-500">{error}</p>}
 
       {report && (
         <>
