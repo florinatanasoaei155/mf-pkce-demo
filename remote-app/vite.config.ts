@@ -17,6 +17,8 @@ export default defineConfig({
       shared: {
         react: { requiredVersion: "^18.2.0" },
         "react-dom": { requiredVersion: "^18.2.0" },
+        tailwindcss: { requiredVersion: "^4.0.5" },
+        "react-router-dom": { requiredVersion: "^7.1.5" },
       },
     }),
   ],
