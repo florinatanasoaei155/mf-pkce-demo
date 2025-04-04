@@ -25,6 +25,7 @@ Module Federation is a feature in Webpack 5 that enables dynamic code sharing be
 
 - **Node.js**: Ensure you have Node.js (v18 or above) installed.
 - **pnpm**: This project uses [pnpm](https://pnpm.io/). If you don't have it installed globally, install it with:
+
   ```bash
   npm install -g pnpm
   ```
