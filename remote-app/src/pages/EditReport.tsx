@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useOidcFetch } from "@axa-fr/react-oidc";
 
 const EditReport = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { fetch } = useOidcFetch();
   const [form, setForm] = useState({ name: "", date: "" });
   const [error, setError] = useState("");
 
@@ -17,7 +15,8 @@ const EditReport = () => {
 
         const data = await response.json();
         setForm({ name: data.name, date: data.date });
-      } catch (err) {
+      } catch (error) {
+        console.error(error);
         setError("Failed to load report.");
       }
     };
@@ -25,11 +24,11 @@ const EditReport = () => {
     fetchReport();
   }, [id]);
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const response = await fetch(`http://localhost:9000/api/reports/${id}`, {
@@ -40,7 +39,8 @@ const EditReport = () => {
 
       if (!response.ok) throw new Error("Failed to update report");
       navigate(`/${id}`);
-    } catch (err) {
+    } catch (error) {
+      console.error(error);
       setError("Failed to update report.");
     }
   };

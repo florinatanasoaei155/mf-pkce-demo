@@ -13,10 +13,10 @@ export default defineConfig({
       remotes: {
         remote_app: "http://localhost:5001/assets/remoteEntry.js",
       },
-      // shared: {
-      //   react: { requiredVersion: "^19.0.0" },
-      //   "react-dom": { requiredVersion: "^19.0.0" },
-      // },
+      shared: {
+        react: { requiredVersion: "^18.2.0" },
+        "react-dom": { requiredVersion: "^18.2.0" },
+      },
     }),
   ],
   build: {

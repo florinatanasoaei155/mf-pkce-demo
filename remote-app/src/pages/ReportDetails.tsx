@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useOidcFetch } from "@axa-fr/react-oidc";
 import { Report } from "../types";
 
 const ReportDetails = () => {
   const { id } = useParams();
-  const { fetch } = useOidcFetch();
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -18,7 +16,8 @@ const ReportDetails = () => {
 
         const data = await response.json();
         setReport(data);
-      } catch (err) {
+      } catch (error) {
+        console.error(error);
         setError("Failed to load report.");
       } finally {
         setLoading(false);

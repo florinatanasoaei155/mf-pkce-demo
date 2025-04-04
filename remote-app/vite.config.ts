@@ -15,8 +15,8 @@ export default defineConfig({
         "./ChildComponent": "./src/components/ChildComponent",
       },
       shared: {
-        react: { requiredVersion: "^19.0.0" },
-        "react-dom": { requiredVersion: "^19.0.0" },
+        react: { requiredVersion: "^18.2.0" },
+        "react-dom": { requiredVersion: "^18.2.0" },
       },
     }),
   ],
